@@ -44,7 +44,7 @@ model Word {
 
     Execution: Run npx prisma db seed to perform the migration.
 
-## [] Task 3: The tRPC Router & FSRS Selection Logic
+## [x] Task 3: The tRPC Router & FSRS Selection Logic
 
     Create Router: In src/server/api/routers/word.ts, define a generateSelection procedure.
 
@@ -60,7 +60,7 @@ model Word {
 
     Return: A shuffled array of 30 Word objects.
 
-## [] Task 4: UI & TTS (Frontend)
+## [x] Task 4: UI & TTS (Frontend)
 
     Components: Use shadcn/ui components (Input, Select, Button, Tooltip, Card).
 
@@ -71,7 +71,7 @@ model Word {
     TTS Support: Add a "Play" icon using the browser's native Web Speech API:
     window.speechSynthesis.speak(new SpeechSynthesisUtterance(word.text));
 
-## [] Task 5: Gemini Story Generation
+## [x] Task 5: Gemini Story Generation
 
     Gemini Integration: In a tRPC mutation generateStory, use the Gemini API to write a story.
 
@@ -79,7 +79,7 @@ model Word {
 
     Streaming: (Optional) Use Vercel AI SDK to stream the story content for a better UX.
 
-## [] Task 6: Progress Tracking (FSRS Review)
+## [x] Task 6: Progress Tracking (FSRS Review)
 
     Evaluation Panel: For each word, display buttons for Again, Hard, Good, Easy.
 

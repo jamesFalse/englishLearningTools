@@ -2,7 +2,7 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { GoogleGenAI } from '@google/genai';
 import { env } from "~/env";
-import { fsrs, Rating } from "ts-fsrs";
+import { fsrs, Rating, createEmptyCard, type Grade } from "ts-fsrs";
 
 export const wordRouter = createTRPCRouter({
   generateSelection: publicProcedure
@@ -91,21 +91,25 @@ export const wordRouter = createTRPCRouter({
         const { words, difficulty } = input;
         const GEMINI_API_KEY = env.GEMINI_API_KEY;
 
-        // Current SDK (GoogleGenAI) setup with proxy
-        const ai = new GoogleGenAI({ 
+        const ai = new GoogleGenAI({
           apiKey: GEMINI_API_KEY,
         });
 
-        const prompt = `Write a short story at English level ${difficulty} using ALL of the following 30 words: ${words.join(", ")}. 
-        Crucially, every time you use one of these 30 words in the story, wrap it in <mark> tags (e.g., <mark>word</mark>). 
-        The story should be coherent and engaging.`;
+        const wordCount = words.length;
+        const targetLength = Math.max(50, wordCount * 12); // Minimum 50 words, or 12 words per target vocabulary
 
-        // The current SDK usually allows custom configuration via model options
+        const prompt = `Write a short story at English level ${difficulty} using ALL of the following ${wordCount} words: ${words.join(", ")}. 
+        
+        CRITICAL CONSTRAINTS:
+        1. Every time you use one of the ${wordCount} words, wrap it in <mark> tags (e.g., <mark>word</mark>). 
+        2. The story must be approximately ${targetLength} words long. (Adjusted for the number of target words).
+        3. The story should be coherent, engaging, and suitable for a ${difficulty} learner.`;
+
         const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash', // Correcting to a valid model
+          model: 'gemini-3-flash-preview', 
           contents: prompt,
         });
-        
+
         return response.text;
       } catch (error: any) {
         console.error("Gemini Story Generation Error:", error);
@@ -126,20 +130,20 @@ export const wordRouter = createTRPCRouter({
       if (!word) throw new Error("Word not found");
 
       const f = fsrs();
-      const card = {
-        due: word.due ?? new Date(),
-        stability: word.stability,
-        difficulty: word.difficulty,
-        elapsed_days: word.elapsed_days,
-        scheduled_days: word.scheduled_days,
-        reps: word.reps,
-        lapses: word.lapses,
-        state: word.state,
-        last_review: word.last_review ?? undefined,
-      };
+      const card = createEmptyCard(); // Initialize with default FSRS card properties
+
+      // Assign existing word data to the card
+      card.due = word.due ?? new Date();
+      card.stability = word.stability;
+      card.difficulty = word.difficulty;
+      card.scheduled_days = word.scheduled_days;
+      card.reps = word.reps;
+      card.lapses = word.lapses;
+      card.state = word.state;
+      card.last_review = word.last_review ?? undefined;
 
       const schedulingCards = f.repeat(card, new Date());
-      const { card: updatedCard } = schedulingCards[rating]!;
+      const { card: updatedCard } = schedulingCards[rating as Grade]!;
 
       return ctx.db.word.update({
         where: { id: wordId },
