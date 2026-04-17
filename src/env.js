@@ -13,6 +13,8 @@ export const env = createEnv({
       .default("development"),
     GEMINI_API_KEY: z.string(),
     HTTPS_PROXY: z.string().optional(),
+    RUNNING_ENV: z.enum(["local", "web"]).default("local"),
+    PASSKEY: z.string().optional(),
   },
 
   /**
@@ -33,6 +35,8 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     HTTPS_PROXY: process.env.HTTPS_PROXY,
+    RUNNING_ENV: process.env.RUNNING_ENV,
+    PASSKEY: process.env.PASSKEY,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**

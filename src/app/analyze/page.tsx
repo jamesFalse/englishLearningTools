@@ -115,7 +115,7 @@ export default function AnalyzePage() {
                 <div className="flex-grow overflow-y-auto p-6">
                   {activeTab === "flow" ? (
                     <div className="space-y-12">
-                      {result.sentences.map((s, sIdx) => (
+                      {result?.sentences?.map((s, sIdx) => (
                         <div key={sIdx} className="space-y-4">
                           <div className="flex items-center gap-3">
                             <span className="rounded bg-blue-600 px-2 py-0.5 text-xs font-bold text-white">
@@ -130,7 +130,7 @@ export default function AnalyzePage() {
                           </div>
 
                           <div className="relative ml-2 border-l-2 border-slate-100 pl-6 space-y-8">
-                            {s.chunks.map((chunk, cIdx) => (
+                            {s.chunks?.map((chunk, cIdx) => (
                               <div key={cIdx} className="group relative">
                                 <div className="absolute -left-[31px] top-2 h-4 w-4 rounded-full border-4 border-slate-200 bg-white transition-colors group-hover:border-blue-500"></div>
                                 <div className="flex flex-col gap-1">
@@ -153,16 +153,16 @@ export default function AnalyzePage() {
                     </div>
                   ) : (
                     <div className="space-y-8">
-                      {result.sentences.map((s, sIdx) => (
+                      {result?.sentences?.map((s, sIdx) => (
                         <div
                           key={sIdx}
                           className="relative rounded-2xl border border-slate-100 bg-slate-50 p-6"
                         >
                           <div className="text-xl leading-relaxed">
                             <TooltipProvider>
-                              {s.chunks.map((chunk, cIdx) => (
+                              {s.chunks?.map((chunk, cIdx) => (
                                 <Tooltip key={cIdx}>
-                                  <TooltipTrigger asChild>
+                                  <TooltipTrigger>
                                     <span
                                       className={`inline px-1 rounded cursor-help transition-all hover:bg-white hover:shadow-sm ${chunk.color_class}`}
                                     >

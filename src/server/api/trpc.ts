@@ -6,11 +6,12 @@
  * TL;DR - This is where all the tRPC server stuff is created and plugged in. The pieces you will
  * need to use are documented accordingly near the end.
  */
-import { initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
 import { db } from "~/server/db";
+import { env } from "~/env";
 
 /**
  * 1. CONTEXT
@@ -97,10 +98,32 @@ const timingMiddleware = t.middleware(async ({ next, path }) => {
 });
 
 /**
+ * Auth middleware to protect procedures in web environment
+ */
+const authMiddleware = t.middleware(async ({ ctx, next, path }) => {
+  // 核心逻辑：仅在 web 环境下强制校验
+  // 白名单：允许获取设置和验证密钥的请求通过
+  const isWhiteListed = path === "grammar.getSettings" || path === "grammar.verifyPasskey";
+  
+  if (env.RUNNING_ENV === "web" && !isWhiteListed) {
+    const clientPasskey = ctx.headers.get("x-passkey");
+    const serverPasskey = env.PASSKEY;
+
+    if (!serverPasskey || clientPasskey !== serverPasskey) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Invalid or missing PASSKEY. Access denied.",
+      });
+    }
+  }
+  return next();
+});
+
+/**
  * Public (unauthenticated) procedure
  *
  * This is the base piece you use to build new queries and mutations on your tRPC API. It does not
  * guarantee that a user querying is authorized, but you can still access user session data if they
  * are logged in.
  */
-export const publicProcedure = t.procedure.use(timingMiddleware);
+export const publicProcedure = t.procedure.use(timingMiddleware).use(authMiddleware);

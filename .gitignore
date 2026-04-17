@@ -4,6 +4,7 @@
 /node_modules
 /.pnp
 .pnp.js
+/LanguageTool-6.6
 
 # testing
 /coverage

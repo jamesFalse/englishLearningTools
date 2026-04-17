@@ -1,10 +1,6 @@
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { env } from "~/env";
-
-// 初始化 Gemini AI
-const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
+import { callGemini } from "~/server/lib/gemini";
 
 const SYSTEM_INSTRUCTION = `
 你是一个认知语言学家。请分析用户提供的英语文本，专注于解析长难句的“母语者阅读逻辑”。
@@ -22,7 +18,7 @@ const SYSTEM_INSTRUCTION = `
    - 结果/影响: text-purple-600
 4. 难度判断：为解析的句子判断 CEFR 等级 (A1-C2)。
 
-必须严格按照以下 JSON 格式输出，且仅输出 JSON，不要包含任何 Markdown 格式：
+必须严格按照以下 JSON 格式输出：
 {
   "sentences": [
     {
@@ -32,7 +28,7 @@ const SYSTEM_INSTRUCTION = `
       "chunks": [
         {
           "text": "Part of sentence",
-          "mental_note": "母语者看到这里的心理预期或反馈",
+          "mental_note": "心理预期反馈",
           "logic_tag": "预警/背景/核心/转折",
           "color_class": "text-blue-600"
         }
@@ -46,22 +42,22 @@ export const analyzeRouter = createTRPCRouter({
   analyzeText: publicProcedure
     .input(z.object({ text: z.string().min(1) }))
     .mutation(async ({ input }) => {
-      const model = genAI.getGenerativeModel({
+      const result = await callGemini(input.text, {
         model: "gemini-3-flash-preview",
-        systemInstruction: SYSTEM_INSTRUCTION
+        systemInstruction: SYSTEM_INSTRUCTION,
+        responseMimeType: "application/json",
       });
 
-      const result = await model.generateContent(input.text);
-      const response = await result.response;
-      const text = response.text();
-
-      try {
-        // 尝试解析 JSON
-        const cleanJson = text.replace(/```json\n?|\n?```/g, "").trim();
-        return JSON.parse(cleanJson);
-      } catch (e) {
-        console.error("Failed to parse Gemini response:", text);
-        throw new Error("Failed to parse AI response as JSON");
+      // 防御性检查
+      if (!result || typeof result !== 'object') return { sentences: [] };
+      if (Array.isArray(result)) return { sentences: result };
+      
+      // 兼容 AI 返回了 sentences 键但不是数组，或者直接返回了数组内容的情况
+      if (!result.sentences || !Array.isArray(result.sentences)) {
+        const potentialArray = Object.values(result).find(val => Array.isArray(val));
+        return { sentences: Array.isArray(potentialArray) ? potentialArray : [] };
       }
+
+      return result;
     }),
 });

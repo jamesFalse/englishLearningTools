@@ -28,10 +28,9 @@ export function WordSelection() {
   const [words, setWords] = useState<any[]>([]);
   const [difficulty, setDifficulty] = useState("B1");
   const [story, setStory] = useState("");
-  
+
   // New States for Batching and Undo
   const [pendingRatings, setPendingRatings] = useState<Record<number, Rating>>({});
-  const [historyStack, setHistoryStack] = useState<number[]>([]);
   const [syncedIds, setSyncedIds] = useState<Set<number>>(new Set());
 
   const utils = api.useUtils();
@@ -56,7 +55,7 @@ export function WordSelection() {
       const newSyncedIds = new Set([...syncedIds, ...submittedIds]);
       setSyncedIds(newSyncedIds);
       localStorage.setItem("syncedIds", JSON.stringify(Array.from(newSyncedIds)));
-      
+
       // Clear submitted from pending
       setPendingRatings(prev => {
         const next = { ...prev };
@@ -64,8 +63,6 @@ export function WordSelection() {
         localStorage.setItem("pendingRatings", JSON.stringify(next));
         return next;
       });
-      // Clear from history stack if they were there
-      setHistoryStack(prev => prev.filter(id => !submittedIds.includes(id)));
     },
     onError: (error) => {
       alert(`Failed to sync progress: ${error.message}`);
@@ -128,7 +125,6 @@ export function WordSelection() {
       setWords(data);
       setStory("");
       setPendingRatings({});
-      setHistoryStack([]);
       setSyncedIds(new Set());
       localStorage.removeItem("pendingRatings");
       localStorage.removeItem("currentWords");
@@ -146,7 +142,7 @@ export function WordSelection() {
 
   const handleGenerateStory = () => {
     if (unratedWords.length === 0) return;
-    
+
     generateStoryMutation.mutate({
       words: unratedWords.map((w) => w.text),
       difficulty,
@@ -155,29 +151,8 @@ export function WordSelection() {
 
   const handleReview = (wordId: number, rating: Rating) => {
     if (syncedIds.has(wordId)) return;
-    
+
     setPendingRatings((prev) => ({ ...prev, [wordId]: rating }));
-    setHistoryStack((prev) => [...prev, wordId]);
-  };
-
-  const handleUndo = () => {
-    if (historyStack.length === 0) return;
-    
-    const lastId = historyStack[historyStack.length - 1]!;
-    setHistoryStack((prev) => prev.slice(0, -1));
-    setPendingRatings((prev) => {
-      const next = { ...prev };
-      delete next[lastId];
-      return next;
-    });
-
-    // Optimization: Scroll to the word that was just undone
-    setTimeout(() => {
-      const element = document.getElementById(`word-card-${lastId}`);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }, 0);
   };
 
   const handleBatchSubmit = async () => {
@@ -196,6 +171,14 @@ export function WordSelection() {
     }
 
     submitBatchReviewMutation.mutate(entries);
+  };
+
+  const handleResetRating = (wordId: number) => {
+    setPendingRatings((prev) => {
+      const next = { ...prev };
+      delete next[wordId];
+      return next;
+    });
   };
 
   const playTTS = (text: string) => {
@@ -249,7 +232,7 @@ export function WordSelection() {
                 />
               </div>
             </div>
-            
+
             <div className="flex gap-4 mt-6">
               {allSynced ? (
                 <Button
@@ -292,30 +275,24 @@ export function WordSelection() {
 
         {words.length > 0 && (
           <div className="space-y-4">
-             <div className="flex items-center justify-between px-2">
-                <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
-                  Word List ({syncedIds.size}/{words.length} synced)
-                </h3>
-                {historyStack.length > 0 && (
-                   <Button variant="ghost" size="sm" onClick={handleUndo} className="h-8 text-xs font-bold text-orange-600 hover:text-orange-700 hover:bg-orange-50">
-                      <RotateCcw className="mr-1 h-3 w-3" />
-                      Undo Last Rating
-                   </Button>
-                )}
-             </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center justify-between px-2">
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">
+                Word List ({syncedIds.size}/{words.length} synced)
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {words.map((word) => {
                 const isSynced = syncedIds.has(word.id);
                 const pendingRating = pendingRatings[word.id];
-                
+
                 return (
-                  <Card 
-                    key={word.id} 
+                  <Card
+                    key={word.id}
                     id={`word-card-${word.id}`}
                     className={`hover:shadow-md transition-all duration-200 border-l-4 border-r border-t border-b ${word.cefr.startsWith("A") ? "border-l-green-500" :
                       word.cefr.startsWith("B") ? "border-l-blue-500" :
                         "border-l-purple-500"
-                    } ${isSynced ? "opacity-50 grayscale bg-muted/30" : pendingRating !== undefined ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-card shadow-sm border-muted/50"}`}>
+                      } ${isSynced ? "opacity-50 grayscale bg-muted/30" : pendingRating !== undefined ? "bg-primary/5 border-primary/20 shadow-sm" : "bg-card shadow-sm border-muted/50"}`}>
                     <CardContent className="p-4 flex flex-col gap-4">
                       <div className="flex items-center justify-between">
                         <div className="flex flex-col">
@@ -332,9 +309,20 @@ export function WordSelection() {
                           </Button>
                           {isSynced && <CheckCircle2 className="h-6 w-6 text-green-500" />}
                           {!isSynced && pendingRating !== undefined && (
-                             <div className="text-[10px] font-black uppercase px-2 py-1 bg-primary text-primary-foreground rounded">
-                               {ratingLabels[pendingRating]}
-                             </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-[10px] font-black uppercase px-2 py-1 bg-primary text-primary-foreground rounded">
+                                {ratingLabels[pendingRating]}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-full text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                                onClick={() => handleResetRating(word.id)}
+                                title="Reset Rating"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -398,7 +386,7 @@ export function WordSelection() {
               <div className="flex flex-wrap items-end gap-4 bg-muted/20 p-4 rounded-lg border border-muted/50">
                 <div className="space-y-1.5 flex-1 min-w-[180px]">
                   <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Target Story Level</label>
-                  <Select value={difficulty} onValueChange={setDifficulty}>
+                  <Select value={difficulty} onValueChange={(val) => val && setDifficulty(val)}>
                     <SelectTrigger className="h-9 bg-background shadow-sm border-muted-foreground/20">
                       <SelectValue placeholder="Select difficulty" />
                     </SelectTrigger>

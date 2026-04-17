@@ -5,6 +5,7 @@ import { Geist } from "next/font/google";
 
 import { TRPCReactProvider } from "~/trpc/react";
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { AuthGuard } from "~/components/auth-guard";
 
 export const metadata: Metadata = {
   title: "AI English Vocabulary",
@@ -24,7 +25,9 @@ export default function RootLayout({
     <html lang="en" className={`${geist.variable}`}>
       <body>
         <TRPCReactProvider>
-          <TooltipProvider>{children}</TooltipProvider>
+          <AuthGuard>
+            <TooltipProvider>{children}</TooltipProvider>
+          </AuthGuard>
         </TRPCReactProvider>
       </body>
     </html>

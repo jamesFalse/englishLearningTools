@@ -55,6 +55,10 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
           headers: () => {
             const headers = new Headers();
             headers.set("x-trpc-source", "nextjs-react");
+            if (typeof window !== "undefined") {
+              const passkey = window.sessionStorage.getItem("english-learning-passkey");
+              if (passkey) headers.set("x-passkey", passkey);
+            }
             return headers;
           },
         }),
